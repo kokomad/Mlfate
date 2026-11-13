@@ -15,7 +15,11 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.*;
+import java.util.HashSet;
 import java.util.zip.*;
+import android.content.Context;
+import android.os.storage.StorageManager;
+import android.os.storage.StorageVolume;
 
 @CapacitorPlugin(name = "FM")
 public class FMPlugin extends Plugin {
@@ -122,21 +126,40 @@ public class FMPlugin extends Plugin {
             p0.put("total", prim.getTotalSpace());
             p0.put("free", prim.getFreeSpace());
             a.put(p0);
-            File[] st = new File("/storage").listFiles();
-            if (st != null) for (File d : st) {
-                String n = d.getName();
-                if (n.equals("emulated") || n.equals("self") || !d.isDirectory() || !d.canRead()) continue;
-                JSObject o = new JSObject();
-                o.put("path", d.getAbsolutePath());
-                o.put("name", "بطاقة SD");
-                o.put("total", d.getTotalSpace());
-                o.put("free", d.getFreeSpace());
-                a.put(o);
+            HashSet<String> seen = new HashSet<>();
+            seen.add(prim.getAbsolutePath());
+            File[] ds = getContext().getExternalFilesDirs(null);
+            if (ds != null) for (File d : ds) {
+                if (d == null) continue;
+                String s = d.getAbsolutePath();
+                int i = s.indexOf("/Android/data");
+                if (i < 0) continue;
+                addRoot(a, new File(s.substring(0, i)), seen);
+            }
+            if (Build.VERSION.SDK_INT >= 30) {
+                StorageManager sm = (StorageManager) getContext().getSystemService(Context.STORAGE_SERVICE);
+                for (StorageVolume v : sm.getStorageVolumes()) {
+                    File d = v.getDirectory();
+                    if (d == null || v.isPrimary()) continue;
+                    addRoot(a, d, seen);
+                }
             }
             JSObject r = new JSObject();
             r.put("roots", a);
             c.resolve(r);
         } catch (Exception e) { c.reject(String.valueOf(e.getMessage())); }
+    }
+
+    void addRoot(JSArray a, File d, HashSet<String> seen) throws Exception {
+        String p = d.getAbsolutePath();
+        if (seen.contains(p) || p.startsWith("/storage/emulated") || !d.exists()) return;
+        seen.add(p);
+        JSObject o = new JSObject();
+        o.put("path", p);
+        o.put("name", "بطاقة SD");
+        o.put("total", d.getTotalSpace());
+        o.put("free", d.getFreeSpace());
+        a.put(o);
     }
 
     @PluginMethod
