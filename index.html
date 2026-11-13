@@ -85,7 +85,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:var(--card2);padding:1
 <h3>الإعدادات</h3>
 <div class="set"><span>الوضع الفاتح</span><button class="ib" onclick="tgTheme()">◐</button></div>
 <div class="set"><span>طلب صلاحيات التخزين</span><button class="ib" onclick="perm()">🔐</button></div>
-<div class="set"><span>الإصدار</span><b>1.0</b></div>
+<div class="set"><span>الإصدار</span><b>1.0</b></div><div class="set"><span>تشخيص</span><b id="dg" style="font-size:12px"></b></div>
 </section>
 </main>
 <button class="fab" id="fab" onclick="fabSheet()">＋</button>
@@ -134,7 +134,7 @@ async function scan(p,d,out,lim){if(d>3||out.length>lim)return;let l;try{l=await
 /* ===== Navigation / render ===== */
 function go(v,b){document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));$('v-'+v).classList.add('on');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));if(b)b.classList.add('on');$('ttl').textContent={home:'مدير الملفات',files:'الملفات',fav:'المفضلة',about:'المطوّر'}[v];$('fab').style.display=v=='files'?'':'none';$('main').scrollTop=0;if(v=='files')open_(path);if(v=='fav')renderFav();if(v=='home')home()}
 function goTab(i){document.querySelectorAll('nav button')[i].click()}
-async function open_(p,cat){path=p;catMode=cat||null;clr();$('q').value='';try{if(cat){const o=[];await scan('',0,o,3000);items=o.filter(f=>kind(f)==cat)}else items=await FSA.list(p)}catch(e){items=[];toast('تعذّر فتح المجلد — امنح الصلاحيات')}render()}
+async function open_(p,cat){path=p;catMode=cat||null;clr();$('q').value='';try{if(cat){const o=[];await scan('',0,o,3000);items=o.filter(f=>kind(f)==cat)}else items=await FSA.list(p)}catch(e){items=[];toast('خطأ: '+((e&&(e.message||e.errorMessage))||JSON.stringify(e)).slice(0,120))}render()}
 function sorted(a){const f=a.slice();f.sort((x,y)=>(y.type=='dir')-(x.type=='dir')||(sortBy=='size'?y.size-x.size:sortBy=='date'?(y.mtime||0)-(x.mtime||0):sortBy=='type'?ext(x.name).localeCompare(ext(y.name)):x.name.localeCompare(y.name,'ar')));return f}
 function render(){
  const q=$('q').value.toLowerCase();let a=items.filter(i=>(hid||i.name[0]!='.')&&i.name.toLowerCase().includes(q));a=sorted(a);
@@ -193,7 +193,7 @@ async function perm(){try{if(NATIVE){const r=await FS.requestPermissions();toast
 /* back button */
 if(NATIVE&&CAP.Plugins.App)CAP.Plugins.App.addListener('backButton',()=>{if($('sheet').classList.contains('on'))cl();else if(selSet.size)clr();else if($('v-files').classList.contains('on')&&(path||catMode))open_(path.split('/').slice(0,-1).join('/'));else if(!$('v-home').classList.contains('on'))goTab(0);else CAP.Plugins.App.exitApp()});
 if(localStorage.th=='l')document.documentElement.classList.add('l');
-$('fab').style.display='none';
+$('fab').style.display='none';$('dg').textContent='native='+NATIVE+' cap='+!!CAP+' fs='+!!FS;
 (async()=>{if(NATIVE)await perm();home()})();
 </script>
 </body>
