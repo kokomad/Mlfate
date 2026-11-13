@@ -5,6 +5,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.Settings;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.Base64;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -83,6 +85,27 @@ public class FMPlugin extends Plugin {
             o.write(Base64.decode(c.getString("data"), Base64.DEFAULT));
             o.close();
             c.resolve();
+        } catch (Exception e) { c.reject(String.valueOf(e.getMessage())); }
+    }
+
+    @PluginMethod
+    public void thumb(PluginCall c) {
+        try {
+            String path = f(c.getString("path")).getPath();
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(path, o);
+            int s = 1;
+            while (o.outWidth / s > 320 || o.outHeight / s > 320) s *= 2;
+            o.inJustDecodeBounds = false;
+            o.inSampleSize = s;
+            Bitmap b = BitmapFactory.decodeFile(path, o);
+            if (b == null) { c.reject("no bitmap"); return; }
+            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+            b.compress(Bitmap.CompressFormat.JPEG, 70, bo);
+            JSObject r = new JSObject();
+            r.put("data", "data:image/jpeg;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP));
+            c.resolve(r);
         } catch (Exception e) { c.reject(String.valueOf(e.getMessage())); }
     }
 

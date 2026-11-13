@@ -37,7 +37,7 @@ h3{font-size:15px;margin:16px 2px 10px;color:var(--mu)}
 .it:active{transform:scale(.97)}.it.sel{outline:2px solid var(--a);background:var(--card2)}
 .ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:23px;flex:none;overflow:hidden;background:var(--card2)}
 .ic img{width:100%;height:100%;object-fit:cover}
-.nm{flex:1;min-width:0}.nm b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nm small{color:var(--mu);font-size:12px}
+.nm{flex:1;min-width:0}.nm small{display:block;direction:ltr;text-align:right}.nm b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nm small{color:var(--mu);font-size:12px}
 .list.g .it{flex-direction:column;text-align:center;padding:14px 6px}.list.g .nm{width:100%}.list.g .ic{width:60px;height:60px}
 .star{position:absolute;left:10px;top:10px;font-size:14px}
 .empty{text-align:center;color:var(--mu);padding:50px 0}.empty div{font-size:54px}
@@ -146,8 +146,10 @@ function render(){
  L._a=a;
  L.querySelectorAll('.it').forEach((e,n)=>{let t,lp;const it=a[n];e.onpointerdown=()=>{lp=0;t=setTimeout(()=>{lp=1;navigator.vibrate&&navigator.vibrate(15);tog(it)},420)};e.onpointerup=e.onpointerleave=()=>clearTimeout(t);e.onclick=()=>{if(lp)return;selSet.size?tog(it):act(it)}});
  thumbs()}
-function row(i){const k=kind(i),s=selSet.has(i.path)?' sel':'';return `<div class="it${s}"><div class="ic" data-p="${i.path.replace(/"/g,'&quot;')}" data-k="${k}">${icon(k)}</div><div class="nm"><b>${i.name}</b><small>${i.type=='dir'?'مجلد':fmt(i.size)+' · '+dt(i.mtime)}</small></div>${favs.includes(i.path)?'<span class="star">⭐</span>':''}</div>`}
-function thumbs(){if(!('IntersectionObserver'in window))return;const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);const it=$('list')._a.find(x=>x.path==e.target.dataset.p);if(it&&e.target.dataset.k=='img'){const im=new Image();im.loading='lazy';im.src=FSA.url(it);im.onload=()=>{e.target.innerHTML='';e.target.appendChild(im)}}}),{root:$('main')});document.querySelectorAll('.ic[data-k=img]').forEach(e=>io.observe(e))}
+function row(i){const k=kind(i),s=selSet.has(i.path)?' sel':'';return `<div class="it${s}"><div class="ic" data-p="${i.path.replace(/"/g,'&quot;')}" data-k="${k}">${icon(k)}</div><div class="nm"><b dir="auto">${i.name}</b><small>${i.type=='dir'?'مجلد':fmt(i.size)+' · '+dt(i.mtime)}</small></div>${favs.includes(i.path)?'<span class="star">⭐</span>':''}</div>`}
+const tq=[];let tr=0;
+function tnext(){while(tr<3&&tq.length){const[el,it]=tq.shift();tr++;(NATIVE?FMP.thumb({path:it.path}).then(r=>r.data):Promise.resolve(FSA.url(it))).then(u=>{const im=new Image();im.src=u;im.onload=()=>{el.innerHTML='';el.appendChild(im)}}).catch(()=>{}).finally(()=>{tr--;tnext()})}}
+function thumbs(){if(!('IntersectionObserver'in window))return;const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);const it=$('list')._a.find(x=>x.path==e.target.dataset.p);if(it&&e.target.dataset.k=='img'){tq.push([e.target,it]);tnext()}}),{root:$('main')});document.querySelectorAll('.ic[data-k=img]').forEach(e=>io.observe(e))}
 function tog(i){selSet.has(i.path)?selSet.delete(i.path):selSet.add(i.path);$('sel').classList.toggle('on',selSet.size>0);$('sc').textContent=selSet.size+' محدد';render()}
 function clr(){selSet.clear();$('sel').classList.remove('on')}
 function selAll(){$('list')._a.forEach(i=>selSet.add(i.path));$('sel').classList.add('on');$('sc').textContent=selSet.size+' محدد';render()}
