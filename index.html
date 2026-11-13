@@ -59,24 +59,25 @@ pre{white-space:pre-wrap;word-break:break-word;background:var(--card2);padding:1
 .dev{background:var(--card);border-radius:26px;padding:26px 18px;text-align:center}
 .av{width:90px;height:90px;border-radius:30px;margin:0 auto 12px;background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center;font-size:40px;color:#fff;font-weight:800}
 .dev a{display:inline-block;margin-top:12px;padding:12px 20px;border-radius:14px;background:linear-gradient(135deg,var(--a),var(--b));color:#fff;text-decoration:none;direction:ltr}
+.sdc{display:flex;align-items:center;gap:10px;width:100%;background:var(--card);border:0;color:var(--tx);border-radius:18px;padding:14px;margin-top:12px;font-size:15px;text-align:right}.sdc small{margin-right:auto;color:var(--mu);direction:ltr}
 .tg{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);background:#000d;color:#fff;padding:11px 18px;border-radius:14px;z-index:50;font-size:14px;opacity:0;transition:.3s;pointer-events:none}.tg.on{opacity:1}
 .set{display:flex;justify-content:space-between;align-items:center;background:var(--card);padding:14px;border-radius:16px;margin-bottom:8px}
 </style>
 </head>
 <body>
 <div id="app">
-<div id="sel"><button onclick="clr()">✕</button><span id="sc">0</span><button onclick="bulk('copy')">نسخ</button><button onclick="bulk('move')">نقل</button><button onclick="bulk('del')">حذف</button></div>
+<div id="sel"><button onclick="clr()">✕</button><span id="sc">0</span><button onclick="bulk('copy')">نسخ</button><button onclick="bulk('move')">نقل</button><button onclick="bulk('zip')">ضغط</button><button onclick="bulk('del')">حذف</button></div>
 <header><h1 id="ttl">مدير الملفات</h1><button class="ib" onclick="tgv()" id="gv">▦</button><button class="ib" onclick="tgTheme()">◐</button></header>
 <main id="main">
 <section class="view on" id="v-home">
 <div class="hero"><b>مساحة التخزين</b><h2 id="st">—</h2><div class="bar"><i id="sb"></i></div><small id="ss"></small></div>
-<div class="grid" id="cats"></div>
+<div id="sdcard"></div><div class="grid" id="cats"></div><div class="tools" id="tools2"></div>
 <h3>⏱ الأحدث</h3><div id="recent"></div>
 </section>
 <section class="view" id="v-files">
 <div class="sr"><span>🔍</span><input id="q" placeholder="ابحث في هذا المجلد..." oninput="render()"></div>
 <div class="bc" id="bc"></div>
-<div class="tools"><button onclick="sortSheet()">⇅ ترتيب</button><button onclick="selAll()">☑ تحديد الكل</button><button onclick="hid=!hid;render()">👁 المخفي</button></div>
+<div class="tools"><button onclick="storSheet()">💾 التخزين</button><button onclick="sortSheet()">⇅ ترتيب</button><button onclick="selAll()">☑ تحديد الكل</button><button onclick="hid=!hid;render()">👁 المخفي</button></div>
 <div class="list" id="list"></div>
 </section>
 <section class="view" id="v-fav"><h3>⭐ المفضلة</h3><div id="favs"></div></section>
@@ -84,6 +85,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:var(--card2);padding:1
 <div class="dev"><div class="av">خ</div><h2>خضر أبو صالح</h2><p style="color:var(--mu);margin-top:4px">Khader Abo Salha</p><p style="margin-top:8px">مطوّر التطبيق</p><a href="mailto:mankhader@gmail.com">mankhader@gmail.com</a></div>
 <h3>الإعدادات</h3>
 <div class="set"><span>الوضع الفاتح</span><button class="ib" onclick="tgTheme()">◐</button></div>
+<div class="set"><span>سلة المحذوفات</span><button class="ib" onclick="trashView()">🗑</button></div>
 <div class="set"><span>طلب صلاحيات التخزين</span><button class="ib" onclick="perm()">🔐</button></div>
 <div class="set"><span>الإصدار</span><b>1.0</b></div><div class="set"><span>تشخيص</span><b id="dg" style="font-size:12px"></b></div>
 </section>
@@ -97,11 +99,12 @@ pre{white-space:pre-wrap;word-break:break-word;background:var(--card2);padding:1
 </nav>
 </div>
 <div class="sheet" id="sheet" onclick="if(event.target==this)cl()"><div class="sh" id="sh"></div></div>
+<div id="vw" style="display:none;position:fixed;inset:0;background:#000;z-index:40;align-items:center;justify-content:center"><button onclick="vclose()" style="position:absolute;top:calc(12px + env(safe-area-inset-top));right:14px;z-index:2;width:44px;height:44px;border-radius:14px;border:0;background:#fff3;color:#fff;font-size:20px">✕</button><div id="vc" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"></div><div id="vn" style="position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));color:#fff;background:#0008;padding:6px 14px;border-radius:12px;font-size:13px"></div></div>
 <div class="tg" id="tg"></div>
 <input type="file" id="imp" multiple hidden>
 <script>
 const $=id=>document.getElementById(id);
-const CAP=window.Capacitor,NATIVE=!!(CAP&&CAP.isNativePlatform&&CAP.isNativePlatform()),FMP=NATIVE?((CAP.Plugins&&CAP.Plugins.FM)||CAP.registerPlugin('FM')):null,FS=FMP,RT='/storage/emulated/0/';
+const CAP=window.Capacitor,NATIVE=!!(CAP&&CAP.isNativePlatform&&CAP.isNativePlatform()),FMP=NATIVE?((CAP.Plugins&&CAP.Plugins.FM)||CAP.registerPlugin('FM')):null,FS=FMP,RT='/storage/emulated/0/';let ROOTS=[];const ab=p=>p&&p[0]=='/'?p:RT+p;
 const DIR='EXTERNAL_STORAGE';
 const EXT={img:['jpg','jpeg','png','gif','webp','bmp','heic'],vid:['mp4','mkv','avi','mov','3gp','webm'],aud:['mp3','wav','ogg','m4a','aac','flac'],doc:['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv','json','html','md','xml'],apk:['apk'],zip:['zip','rar','7z','tar','gz']};
 const CATS=[['img','الصور','🖼','#ff7a59'],['vid','الفيديو','🎬','#7c5cff'],['aud','الصوت','🎵','#00c2ff'],['doc','المستندات','📄','#27e1a0'],['apk','التطبيقات','📦','#ffb020'],['zip','المضغوطات','🗜','#ff5d9e']];
@@ -120,7 +123,7 @@ const all=()=>tx('readonly',s=>s.getAll());
 const J=(a,b)=>a?a+'/'+b:b;
 const FSA={
 async list(p){
- if(NATIVE){const r=await FMP.list({path:p});return r.files.map(f=>({name:f.name,type:f.dir?'dir':'file',size:f.size||0,mtime:f.mtime,path:J(p,f.name),uri:'file://'+RT+J(p,f.name)}))}
+ if(NATIVE){const r=await FMP.list({path:p});return r.files.map(f=>({name:f.name,type:f.dir?'dir':'file',size:f.size||0,mtime:f.mtime,path:J(p,f.name),uri:'file://'+ab(J(p,f.name))}))}
  const a=await all();const seen={},out=[];
  a.forEach(f=>{if(p&&!f.path.startsWith(p+'/'))return;const rest=p?f.path.slice(p.length+1):f.path;const n=rest.split('/')[0];if(rest.includes('/')){if(!seen[n]){seen[n]=1;out.push({name:n,type:'dir',size:0,path:J(p,n)})}}else if(f.type=='dir'){if(!seen[n]){seen[n]=1;out.push({name:n,type:'dir',size:0,path:f.path})}}else out.push({name:n,type:'file',size:f.size,mtime:f.mtime,path:f.path,blob:f.blob})});return out},
 async mkdir(p){NATIVE?await FMP.mkdir({path:p}):await tx('readwrite',s=>s.put({path:p,type:'dir'}))},
@@ -128,19 +131,28 @@ async del(it){if(NATIVE){await FMP.del({path:it.path})}else{const a=await all();
 async ren(it,nn){const to=J(it.path.split('/').slice(0,-1).join('/'),nn);await this.mv(it,to)},
 async mv(it,to){if(NATIVE)await FMP.mv({from:it.path,to});else{const a=await all();for(const f of a)if(f.path==it.path||f.path.startsWith(it.path+'/')){await tx('readwrite',s=>s.delete(f.path));f.path=to+f.path.slice(it.path.length);await tx('readwrite',s=>s.put(f))}}},
 async cp(it,to){if(NATIVE)await FMP.cp({from:it.path,to});else{const a=await all();for(const f of a)if(f.path==it.path||f.path.startsWith(it.path+'/')){const n={...f,path:to+f.path.slice(it.path.length)};await tx('readwrite',s=>s.put(n))}}},
-url(it){if(NATIVE)return CAP.convertFileSrc('file://'+RT+it.path);return it.blob?URL.createObjectURL(it.blob):''}
+url(it){if(NATIVE)return CAP.convertFileSrc('file://'+ab(it.path));return it.blob?URL.createObjectURL(it.blob):''}
 };
 async function scan(p,d,out,lim){if(d>3||out.length>lim)return;let l;try{l=await FSA.list(p)}catch(e){window._se=((e&&e.message)||e)+'';return}for(const f of l){if(f.name[0]=='.'||(d==0&&f.name=='Android'))continue;if(f.type=='dir')await scan(f.path,d+1,out,lim);else out.push(f)}}
 /* ===== Navigation / render ===== */
 function go(v,b){document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));$('v-'+v).classList.add('on');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));if(b)b.classList.add('on');$('ttl').textContent={home:'مدير الملفات',files:'الملفات',fav:'المفضلة',about:'المطوّر'}[v];$('fab').style.display=v=='files'?'':'none';$('main').scrollTop=0;if(v=='files'&&!window._skip)open_(path);if(v=='fav')renderFav();if(v=='home')home()}
 function catGo(c){window._skip=1;goTab(1);window._skip=0;open_('',c)}
 function goTab(i){document.querySelectorAll('nav button')[i].click()}
-async function open_(p,cat){path=p;catMode=cat||null;clr();$('q').value='';try{if(cat){const o=[];await scan('',0,o,3000);items=o.filter(f=>kind(f)==cat);if(!items.length&&window._se)toast('خطأ: '+window._se)}else items=await FSA.list(p)}catch(e){items=[];toast('خطأ: '+((e&&(e.message||e.errorMessage))||JSON.stringify(e)).slice(0,120))}render()}
+async function allFiles(){if(window._all&&Date.now()-window._allT<30000)return window._all;const o=[];for(const r of [''].concat(ROOTS.filter(x=>x.path).map(x=>x.path)))await scan(r,0,o,6000);window._all=o;window._allT=Date.now();return o}
+async function catItems(c){const o=await allFiles();if(c=='big')return o.slice().sort((a,b)=>b.size-a.size).slice(0,50);if(c=='dup'){const m={};o.forEach(f=>{if(f.size>0)(m[f.name+'|'+f.size]=m[f.name+'|'+f.size]||[]).push(f)});return Object.values(m).filter(g=>g.length>1).flat()}return o.filter(f=>kind(f)==c)}
+async function open_(p,cat){path=p;catMode=cat||null;clr();$('q').value='';try{if(cat){toast('جارٍ البحث...');items=await catItems(cat);if(!items.length&&window._se)toast('خطأ: '+window._se)}else{window._all=null;items=await FSA.list(p)}}catch(e){items=[];toast('خطأ: '+((e&&(e.message||e.errorMessage))||JSON.stringify(e)).slice(0,120))}render()}
+function openRoot(p){window._skip=1;goTab(1);window._skip=0;open_(p)}
+function up(){const b=ROOTS.find(r=>r.path&&r.path==path);if(b||(path.startsWith('/')&&path.split('/').length<=3))return open_('');open_(path.split('/').slice(0,-1).join('/'))}
+function storSheet(){const rs=ROOTS.length?ROOTS:[{path:'',name:'الذاكرة الداخلية',total:0,free:0}];sh('<h4>اختر التخزين</h4>'+rs.map(r=>`<button class="o" onclick="cl();open_('${r.path}')">${r.path?'💾':'📱'} ${r.name}${r.total?' — المتاح '+fmt(r.free):''}</button>`).join(''))}
 function sorted(a){const f=a.slice();f.sort((x,y)=>(y.type=='dir')-(x.type=='dir')||(sortBy=='size'?y.size-x.size:sortBy=='date'?(y.mtime||0)-(x.mtime||0):sortBy=='type'?ext(x.name).localeCompare(ext(y.name)):x.name.localeCompare(y.name,'ar')));return f}
 function render(){
  const q=$('q').value.toLowerCase();let a=items.filter(i=>(hid||i.name[0]!='.')&&i.name.toLowerCase().includes(q));a=sorted(a);
- const parts=path?path.split('/'):[];let h='<button onclick="open_(\'\')">🏠 الرئيسي</button>';parts.forEach((s,i)=>h+=`<button onclick="open_('${parts.slice(0,i+1).join('/').replace(/'/g,"\\'")}')">${s}</button>`);
- $('bc').innerHTML=catMode?`<button>${CATS.find(c=>c[0]==catMode)[1]}</button>`:h;
+ const bcb=(p,s)=>`<button onclick="open_('${p.replace(/'/g,"\\'")}')">${s}</button>`;
+ const base=ROOTS.find(r=>r.path&&(path==r.path||path.startsWith(r.path+'/')));let h;
+ if(base){const ps=path.slice(base.path.length+1).split('/').filter(Boolean);h=bcb(base.path,'💾 '+base.name);ps.forEach((s,i)=>h+=bcb(base.path+'/'+ps.slice(0,i+1).join('/'),s))}
+ else{const ps=path?path.split('/'):[];h=bcb('','📱 الذاكرة الداخلية');ps.forEach((s,i)=>h+=bcb(ps.slice(0,i+1).join('/'),s))}
+ const CL={big:'الملفات الكبيرة',dup:'الملفات المكررة'};
+ $('bc').innerHTML=catMode?`<button>${(CATS.find(c=>c[0]==catMode)||[0,CL[catMode]])[1]}</button>`:h;
  const L=$('list');L.className='list'+(grid?' g':'');
  L.innerHTML=a.length?a.map(i=>row(i)).join(''):'<div class="empty"><div>📂</div>المجلد فارغ<br><small>اضغط ＋ لاستيراد ملفات</small></div>';
  L._a=a;
@@ -157,7 +169,10 @@ const tgv=()=>{grid=!grid;$('gv').textContent=grid?'☰':'▦';render()};
 function tgTheme(){document.documentElement.classList.toggle('l');localStorage.th=document.documentElement.classList.contains('l')?'l':'d'}
 /* ===== Home ===== */
 async function home(){
- if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();const u=e.usage||0,qt=e.quota||1;$('st').textContent=fmt(u)+' مستخدم';$('sb').style.width=Math.max(2,u/qt*100)+'%';$('ss').textContent='المتاح: '+fmt(qt-u)}
+ if(NATIVE){try{const r=await FMP.roots();ROOTS=r.roots||[];const pm=ROOTS.find(x=>!x.path)||ROOTS[0];if(pm){const u=pm.total-pm.free;$('st').textContent=fmt(u)+' / '+fmt(pm.total);$('sb').style.width=Math.max(2,u/pm.total*100)+'%';$('ss').textContent='المتاح: '+fmt(pm.free)}}catch(e){}}
+ else if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();const u=e.usage||0,qt=e.quota||1;$('st').textContent=fmt(u)+' مستخدم';$('sb').style.width=Math.max(2,u/qt*100)+'%';$('ss').textContent='المتاح: '+fmt(qt-u)}
+ $('sdcard').innerHTML=ROOTS.filter(x=>x.path).map(x=>`<button class="sdc" onclick="openRoot('${x.path}')">💾 <b>${x.name}</b><small>${fmt(x.total-x.free)} / ${fmt(x.total)}</small></button>`).join('');
+ $('tools2').innerHTML='<button onclick="catGo(\'big\')">📊 الكبيرة</button><button onclick="catGo(\'dup\')">👯 المكررة</button><button onclick="trashView()">🗑 السلة</button>';
  $('cats').innerHTML=CATS.map(c=>`<button class="cat" onclick="catGo('${c[0]}')"><span style="background:${c[3]}33;color:${c[3]}">${c[2]}</span>${c[1]}</button>`).join('');
  const o=[];await scan('',0,o,400);o.sort((a,b)=>(b.mtime||0)-(a.mtime||0));
  $('recent').innerHTML=o.slice(0,8).map(i=>row(i)).join('')||'<div class="empty"><div>📭</div>لا توجد ملفات بعد<br><small>اذهب إلى «الملفات» واضغط ＋</small></div>';
@@ -176,25 +191,41 @@ async function act(it){
  let body='';
  if(k=='img')body=`<img class="pv" src="${u}">`;else if(k=='vid')body=`<video class="pv" src="${u}" controls playsinline></video>`;else if(k=='aud')body=`<audio src="${u}" controls style="width:100%;margin-bottom:10px"></audio>`;
  else if(['txt','json','md','csv','html','xml'].includes(ext(it.name))){try{const t=await (await fetch(u)).text();body='<pre></pre>';setTimeout(()=>document.querySelector('#sh pre').textContent=t.slice(0,20000),0)}catch(e){}}
- const fv=favs.includes(it.path);
+ const fv=favs.includes(it.path);window._cur=it;const ep=it.path.replace(/'/g,"\\'");const extra=(ext(it.name)=='zip'?`<button class="o" onclick="unz('${ep}')">📂 فك الضغط هنا</button>`:'')+(['img','vid'].includes(k)?`<button class="o" onclick="view('${ep}')">⛶ عرض بملء الشاشة</button>`:'');
  sh(`<h4>${it.name}</h4>${body}<p style="color:var(--mu);margin-bottom:12px;font-size:13px">${fmt(it.size)} · ${dt(it.mtime)}<br>${it.path}</p>
- <button class="o" onclick="shareIt('${it.path.replace(/'/g,"\\'")}')">📤 مشاركة</button>
+ ${extra}<button class="o" onclick="shareIt('${it.path.replace(/'/g,"\\'")}')">📤 مشاركة</button>
  <button class="o" onclick="fav('${it.path.replace(/'/g,"\\'")}')">${fv?'☆ إزالة من المفضلة':'⭐ إضافة للمفضلة'}</button>
  <button class="o" onclick="one('ren','${it.path.replace(/'/g,"\\'")}')">✏ إعادة تسمية</button>
  <button class="o" onclick="one('copy','${it.path.replace(/'/g,"\\'")}')">⧉ نسخ</button>
  <button class="o" onclick="one('move','${it.path.replace(/'/g,"\\'")}')">✂ نقل</button>
  <button class="o" style="color:var(--bad)" onclick="one('del','${it.path.replace(/'/g,"\\'")}')">🗑 حذف</button>`)}
-const find=p=>$('list')._a.find(x=>x.path==p)||items.find(x=>x.path==p);
+const find=p=>(window._cur&&window._cur.path==p&&window._cur)||$('list')._a.find(x=>x.path==p)||items.find(x=>x.path==p);
 function fav(p){favs=favs.includes(p)?favs.filter(x=>x!=p):[...favs,p];localStorage.fav=JSON.stringify(favs);cl();render();toast('تم')}
 async function shareIt(p){const it=find(p);cl();try{if(NATIVE&&CAP.registerPlugin('Share'))await CAP.registerPlugin('Share').share({title:it.name,url:it.uri});else if(navigator.share&&it.blob)await navigator.share({files:[new File([it.blob],it.name)]});else toast('المشاركة غير متاحة')}catch(e){}}
-function one(a,p){cl();const it=find(p);if(a=='ren')ask('الاسم الجديد',it.name,async n=>{await FSA.ren(it,n);toast('تمت التسمية');open_(path,catMode)});else if(a=='del')conf('حذف «'+it.name+'»؟',async()=>{await FSA.del(it);toast('تم الحذف');open_(path,catMode)});else{clip={m:a,items:[it]};toast('اذهب للمجلد الهدف ثم ＋ ← لصق');}}
-function bulk(a){const its=[...selSet].map(find).filter(Boolean);if(a=='del')conf('حذف '+its.length+' عنصر؟',async()=>{for(const i of its)await FSA.del(i);clr();toast('تم الحذف');open_(path,catMode)});else{clip={m:a,items:its};clr();render();toast('انتقل للمجلد الهدف ثم ＋ ← لصق')}}
+function one(a,p){cl();const it=find(p);if(a=='ren')ask('الاسم الجديد',it.name,async n=>{await FSA.ren(it,n);toast('تمت التسمية');open_(path,catMode)});else if(a=='del')conf('حذف «'+it.name+'»؟',async()=>{await delIt(it);toast('تم الحذف');open_(path,catMode)});else{clip={m:a,items:[it]};toast('اذهب للمجلد الهدف ثم ＋ ← لصق');}}
+function bulk(a){const its=[...selSet].map(find).filter(Boolean);if(a=='zip'){if(!NATIVE)return toast('متاح في تطبيق APK');ask('اسم الأرشيف','archive',async n=>{toast('جارٍ الضغط...');try{await FMP.zip({paths:its.map(i=>i.path),to:J(path,n.replace(/\.zip$/i,'')+'.zip')});clr();toast('تم الضغط ✔');open_(path)}catch(e){toast('خطأ: '+(e.message||e))}});return}if(a=='del')conf('حذف '+its.length+' عنصر؟',async()=>{for(const i of its)await delIt(i);clr();toast('تم الحذف');open_(path,catMode)});else{clip={m:a,items:its};clr();render();toast('انتقل للمجلد الهدف ثم ＋ ← لصق')}}
 function conf(t,f){sh(`<h4>${t}</h4><div class="row"><button class="c" onclick="cl()">إلغاء</button><button style="background:var(--bad)" id="ok">تأكيد</button></div>`);$('ok').onclick=()=>{cl();f()}}
-async function paste(){cl();for(const i of clip.items){const to=J(path,i.name);if(to==i.path||to.startsWith(i.path+'/'))continue;clip.m=='move'?await FSA.mv(i,to):await FSA.cp(i,to)}clip=null;toast('تم');open_(path)}
+async function paste(){cl();toast('جارٍ التنفيذ... قد يستغرق وقتاً');try{for(const i of clip.items){const to=J(path,i.name);if(to==i.path||to.startsWith(i.path+'/'))continue;clip.m=='move'?await FSA.mv(i,to):await FSA.cp(i,to)}}catch(e){toast('خطأ: '+(e.message||e));clip=null;open_(path);return}clip=null;toast('تم ✔');open_(path)}
 $('imp').onchange=async e=>{for(const f of e.target.files){if(NATIVE){const d=await new Promise(r=>{const x=new FileReader;x.onload=()=>r(x.result.split(',')[1]);x.readAsDataURL(f)});await FMP.write({path:J(path,f.name),data:d})}else await tx('readwrite',s=>s.put({path:J(path,f.name),type:'file',name:f.name,size:f.size,mtime:Date.now(),blob:f}))}toast('تم استيراد '+e.target.files.length+' ملف');e.target.value='';open_(path)};
 async function perm(){try{if(NATIVE){const r=await FMP.check();if(r.granted)toast('الصلاحية ممنوحة ✔');else{toast('فعّل «الوصول إلى كل الملفات» ثم ارجع للتطبيق');await FMP.ask()}}else toast('الصلاحيات تُطلب داخل تطبيق APK')}catch(e){toast('خطأ: '+(e.message||e))}}
+
+/* ===== Trash / Zip / Viewer ===== */
+const TR='.mlfati_trash';let tmap=JSON.parse(localStorage.tmap||'{}');const tsave=()=>localStorage.tmap=JSON.stringify(tmap);
+const esc=s=>s.replace(/'/g,"\\'");
+async function delIt(it){if(it.path.startsWith('/')||it.path.startsWith(TR)){await FSA.del(it);return}const n=Date.now()+'_'+it.name;await FSA.mkdir(TR);await FSA.mv(it,TR+'/'+n);tmap[n]={p:it.path};tsave()}
+async function trashView(){let l=[];try{l=await FSA.list(TR)}catch(e){}
+ sh('<h4>🗑 سلة المحذوفات ('+l.length+')</h4>'+(l.length?l.map(i=>`<div class="set"><span dir="auto" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.name.replace(/^\d+_/,'')}</span><button class="ib" onclick="trRestore('${esc(i.name)}')">↩</button><button class="ib" onclick="trKill('${esc(i.name)}')">✖</button></div>`).join('')+'<button class="o" style="color:var(--bad)" onclick="trEmpty()">تفريغ السلة نهائياً</button>':'<div class="empty">السلة فارغة</div>'))}
+async function trRestore(n){const o=tmap[n];if(!o)return toast('المسار الأصلي غير معروف');try{await FSA.mv({path:TR+'/'+n},o.p);delete tmap[n];tsave();toast('تمت الاستعادة ✔')}catch(e){toast('خطأ: '+(e.message||e))}trashView()}
+async function trKill(n){await FSA.del({path:TR+'/'+n,type:'file'});delete tmap[n];tsave();trashView()}
+async function trEmpty(){let l=[];try{l=await FSA.list(TR)}catch(e){}for(const i of l)await FSA.del(i);tmap={};tsave();trashView()}
+async function unz(p){cl();const it=find(p);const d=J(it.path.split('/').slice(0,-1).join('/'),it.name.replace(/\.zip$/i,''));if(!NATIVE)return toast('متاح في تطبيق APK');toast('جارٍ فك الضغط...');try{await FMP.unzip({path:it.path,to:d});toast('تم فك الضغط ✔');open_(path,catMode)}catch(e){toast('خطأ: '+(e.message||e))}}
+let vl=[],vi=0;
+function view(p){cl();const b=($('list')._a||[]).filter(x=>['img','vid'].includes(kind(x)));const it=find(p);vl=b.some(x=>x.path==p)?b:[it];vi=Math.max(0,vl.findIndex(x=>x.path==p));vshow()}
+function vshow(){const it=vl[vi],k=kind(it),c=$('vc');$('vw').style.display='flex';c.innerHTML='';if(k=='vid'){c.innerHTML=`<video src="${FSA.url(it)}" controls autoplay playsinline style="max-width:100%;max-height:100%"></video>`}else{const im=new Image();im.style.cssText='max-width:100%;max-height:100%;object-fit:contain';im.onerror=async()=>{im.onerror=null;if(NATIVE){try{im.src=(await FMP.thumb({path:it.path,max:1800})).data}catch(e){}}};im.src=FSA.url(it);c.appendChild(im)}$('vn').textContent=(vi+1)+' / '+vl.length}
+function vclose(){$('vw').style.display='none';$('vc').innerHTML=''}
+let tx0=0;$('vw').addEventListener('touchstart',e=>{tx0=e.touches[0].clientX},{passive:true});$('vw').addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx0;if(Math.abs(d)>70&&vl.length>1){vi=(vi+(d<0?1:-1)+vl.length)%vl.length;vshow()}});
 /* back button */
-if(NATIVE)CAP.registerPlugin('App').addListener('backButton',()=>{if($('sheet').classList.contains('on'))cl();else if(selSet.size)clr();else if($('v-files').classList.contains('on')&&(path||catMode))open_(path.split('/').slice(0,-1).join('/'));else if(!$('v-home').classList.contains('on'))goTab(0);else CAP.registerPlugin('App').exitApp()});
+if(NATIVE)CAP.registerPlugin('App').addListener('backButton',()=>{if($('vw').style.display=='flex')vclose();else if($('sheet').classList.contains('on'))cl();else if(selSet.size)clr();else if($('v-files').classList.contains('on')&&(path||catMode))up();else if(!$('v-home').classList.contains('on'))goTab(0);else CAP.registerPlugin('App').exitApp()});
 if(localStorage.th=='l')document.documentElement.classList.add('l');
 $('fab').style.display='none';$('dg').textContent='native='+NATIVE+' cap='+!!CAP+' fm='+!!FMP;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&NATIVE){home();if($('v-files').classList.contains('on'))open_(path,catMode)}});

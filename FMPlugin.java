@@ -15,10 +15,11 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.*;
+import java.util.zip.*;
 
 @CapacitorPlugin(name = "FM")
 public class FMPlugin extends Plugin {
-    File f(String p) { return new File(Environment.getExternalStorageDirectory(), p == null ? "" : p); }
+    File f(String p) { if (p != null && p.startsWith("/")) return new File(p); return new File(Environment.getExternalStorageDirectory(), p == null ? "" : p); }
 
     @PluginMethod
     public void check(PluginCall c) {
@@ -68,7 +69,7 @@ public class FMPlugin extends Plugin {
     @PluginMethod
     public void mv(PluginCall c) {
         File a = f(c.getString("from")), b = f(c.getString("to"));
-        try { if (!a.renameTo(b)) { copy(a, b); rm(a); } c.resolve(); } catch (Exception e) { c.reject(String.valueOf(e.getMessage())); }
+        try { b.getParentFile().mkdirs(); if (!a.renameTo(b)) { copy(a, b); rm(a); } c.resolve(); } catch (Exception e) { c.reject(String.valueOf(e.getMessage())); }
     }
 
     @PluginMethod
@@ -96,7 +97,8 @@ public class FMPlugin extends Plugin {
             o.inJustDecodeBounds = true;
             BitmapFactory.decodeFile(path, o);
             int s = 1;
-            while (o.outWidth / s > 320 || o.outHeight / s > 320) s *= 2;
+            int mx = c.getInt("max", 320);
+            while (o.outWidth / s > mx || o.outHeight / s > mx) s *= 2;
             o.inJustDecodeBounds = false;
             o.inSampleSize = s;
             Bitmap b = BitmapFactory.decodeFile(path, o);
@@ -107,6 +109,85 @@ public class FMPlugin extends Plugin {
             r.put("data", "data:image/jpeg;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP));
             c.resolve(r);
         } catch (Exception e) { c.reject(String.valueOf(e.getMessage())); }
+    }
+
+    @PluginMethod
+    public void roots(PluginCall c) {
+        try {
+            JSArray a = new JSArray();
+            File prim = Environment.getExternalStorageDirectory();
+            JSObject p0 = new JSObject();
+            p0.put("path", "");
+            p0.put("name", "الذاكرة الداخلية");
+            p0.put("total", prim.getTotalSpace());
+            p0.put("free", prim.getFreeSpace());
+            a.put(p0);
+            File[] st = new File("/storage").listFiles();
+            if (st != null) for (File d : st) {
+                String n = d.getName();
+                if (n.equals("emulated") || n.equals("self") || !d.isDirectory() || !d.canRead()) continue;
+                JSObject o = new JSObject();
+                o.put("path", d.getAbsolutePath());
+                o.put("name", "بطاقة SD");
+                o.put("total", d.getTotalSpace());
+                o.put("free", d.getFreeSpace());
+                a.put(o);
+            }
+            JSObject r = new JSObject();
+            r.put("roots", a);
+            c.resolve(r);
+        } catch (Exception e) { c.reject(String.valueOf(e.getMessage())); }
+    }
+
+    @PluginMethod
+    public void zip(PluginCall c) {
+        try {
+            JSArray ps = c.getArray("paths");
+            File out = f(c.getString("to"));
+            out.getParentFile().mkdirs();
+            ZipOutputStream z = new ZipOutputStream(new FileOutputStream(out));
+            for (int i = 0; i < ps.length(); i++) { File s = f(ps.getString(i)); addZip(z, s, s.getName()); }
+            z.close();
+            c.resolve();
+        } catch (Exception e) { c.reject(String.valueOf(e.getMessage())); }
+    }
+
+    @PluginMethod
+    public void unzip(PluginCall c) {
+        try {
+            File d = f(c.getString("to"));
+            d.mkdirs();
+            ZipInputStream z = new ZipInputStream(new FileInputStream(f(c.getString("path"))));
+            ZipEntry e;
+            while ((e = z.getNextEntry()) != null) {
+                File t = new File(d, e.getName());
+                if (!t.getCanonicalPath().startsWith(d.getCanonicalPath())) continue;
+                if (e.isDirectory()) { t.mkdirs(); continue; }
+                t.getParentFile().mkdirs();
+                FileOutputStream o = new FileOutputStream(t);
+                byte[] b = new byte[65536];
+                int k;
+                while ((k = z.read(b)) > 0) o.write(b, 0, k);
+                o.close();
+            }
+            z.close();
+            c.resolve();
+        } catch (Exception e) { c.reject(String.valueOf(e.getMessage())); }
+    }
+
+    void addZip(ZipOutputStream z, File x, String n) throws IOException {
+        if (x.isDirectory()) {
+            File[] l = x.listFiles();
+            if (l != null) for (File y : l) addZip(z, y, n + "/" + y.getName());
+        } else {
+            z.putNextEntry(new ZipEntry(n));
+            FileInputStream i = new FileInputStream(x);
+            byte[] b = new byte[65536];
+            int k;
+            while ((k = i.read(b)) > 0) z.write(b, 0, k);
+            i.close();
+            z.closeEntry();
+        }
     }
 
     void rm(File x) {
