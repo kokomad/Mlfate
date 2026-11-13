@@ -15,47 +15,18 @@ jobs:
       - name: Create project
         run: |
           npm init -y
-          npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/filesystem @capacitor/share @capacitor/app
+          npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/share @capacitor/app
           mkdir www && cp index.html www/
-          python3 - <<'EOF'
-          p='www/index.html'
-          s=open(p,encoding='utf8').read()
-          s=s.replace("CAP&&CAP.Plugins&&CAP.Plugins.Filesystem","CAP&&CAP.registerPlugin&&CAP.registerPlugin('Filesystem')")
-          s=s.replace("CAP.Plugins.Share","CAP.registerPlugin('Share')").replace("CAP.Plugins.App","CAP.registerPlugin('App')")
-          open(p,'w',encoding='utf8').write(s)
-          EOF
           npx cap init "ملفاتي" com.khader.mlfati --web-dir www
           npx cap add android
           D=android/app/src/main/java/com/khader/mlfati
           mkdir -p $D
-          cat > $D/MainActivity.java <<'EOF'
-          package com.khader.mlfati;
-          import android.content.Intent;
-          import android.net.Uri;
-          import android.os.Build;
-          import android.os.Bundle;
-          import android.os.Environment;
-          import android.provider.Settings;
-          import com.getcapacitor.BridgeActivity;
-          public class MainActivity extends BridgeActivity {
-            @Override
-            public void onCreate(Bundle b) {
-              super.onCreate(b);
-              if (Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager()) {
-                try {
-                  startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + getPackageName())));
-                } catch (Exception e) {
-                  startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
-                }
-              }
-            }
-          }
-          EOF
+          cp MainActivity.java FMPlugin.java $D/
           npx cap sync android
       - name: Permissions
         run: |
           M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#<application#<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/><uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/><uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/><uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/><uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/><uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/><application android:requestLegacyExternalStorage="true"#' $M
+          sed -i 's#<application#<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/><uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/><uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/><application android:requestLegacyExternalStorage="true"#' $M
       - name: Icon
         run: |
           if [ -f icon.png ]; then
