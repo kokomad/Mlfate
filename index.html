@@ -101,7 +101,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:var(--card2);padding:1
 <input type="file" id="imp" multiple hidden>
 <script>
 const $=id=>document.getElementById(id);
-const CAP=window.Capacitor,NATIVE=!!(CAP&&CAP.isNativePlatform&&CAP.isNativePlatform()),FM=NATIVE?CAP.registerPlugin('FM'):null,FS=FM,RT='/storage/emulated/0/';
+const CAP=window.Capacitor,NATIVE=!!(CAP&&CAP.isNativePlatform&&CAP.isNativePlatform()),FMP=NATIVE?((CAP.Plugins&&CAP.Plugins.FM)||CAP.registerPlugin('FM')):null,FS=FMP,RT='/storage/emulated/0/';
 const DIR='EXTERNAL_STORAGE';
 const EXT={img:['jpg','jpeg','png','gif','webp','bmp','heic'],vid:['mp4','mkv','avi','mov','3gp','webm'],aud:['mp3','wav','ogg','m4a','aac','flac'],doc:['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv','json','html','md','xml'],apk:['apk'],zip:['zip','rar','7z','tar','gz']};
 const CATS=[['img','الصور','🖼','#ff7a59'],['vid','الفيديو','🎬','#7c5cff'],['aud','الصوت','🎵','#00c2ff'],['doc','المستندات','📄','#27e1a0'],['apk','التطبيقات','📦','#ffb020'],['zip','المضغوطات','🗜','#ff5d9e']];
@@ -120,14 +120,14 @@ const all=()=>tx('readonly',s=>s.getAll());
 const J=(a,b)=>a?a+'/'+b:b;
 const FSA={
 async list(p){
- if(NATIVE){const r=await FM.list({path:p});return r.files.map(f=>({name:f.name,type:f.dir?'dir':'file',size:f.size||0,mtime:f.mtime,path:J(p,f.name),uri:'file://'+RT+J(p,f.name)}))}
+ if(NATIVE){const r=await FMP.list({path:p});return r.files.map(f=>({name:f.name,type:f.dir?'dir':'file',size:f.size||0,mtime:f.mtime,path:J(p,f.name),uri:'file://'+RT+J(p,f.name)}))}
  const a=await all();const seen={},out=[];
  a.forEach(f=>{if(p&&!f.path.startsWith(p+'/'))return;const rest=p?f.path.slice(p.length+1):f.path;const n=rest.split('/')[0];if(rest.includes('/')){if(!seen[n]){seen[n]=1;out.push({name:n,type:'dir',size:0,path:J(p,n)})}}else if(f.type=='dir'){if(!seen[n]){seen[n]=1;out.push({name:n,type:'dir',size:0,path:f.path})}}else out.push({name:n,type:'file',size:f.size,mtime:f.mtime,path:f.path,blob:f.blob})});return out},
-async mkdir(p){NATIVE?await FM.mkdir({path:p}):await tx('readwrite',s=>s.put({path:p,type:'dir'}))},
-async del(it){if(NATIVE){await FM.del({path:it.path})}else{const a=await all();for(const f of a)if(f.path==it.path||f.path.startsWith(it.path+'/'))await tx('readwrite',s=>s.delete(f.path))}},
+async mkdir(p){NATIVE?await FMP.mkdir({path:p}):await tx('readwrite',s=>s.put({path:p,type:'dir'}))},
+async del(it){if(NATIVE){await FMP.del({path:it.path})}else{const a=await all();for(const f of a)if(f.path==it.path||f.path.startsWith(it.path+'/'))await tx('readwrite',s=>s.delete(f.path))}},
 async ren(it,nn){const to=J(it.path.split('/').slice(0,-1).join('/'),nn);await this.mv(it,to)},
-async mv(it,to){if(NATIVE)await FM.mv({from:it.path,to});else{const a=await all();for(const f of a)if(f.path==it.path||f.path.startsWith(it.path+'/')){await tx('readwrite',s=>s.delete(f.path));f.path=to+f.path.slice(it.path.length);await tx('readwrite',s=>s.put(f))}}},
-async cp(it,to){if(NATIVE)await FM.cp({from:it.path,to});else{const a=await all();for(const f of a)if(f.path==it.path||f.path.startsWith(it.path+'/')){const n={...f,path:to+f.path.slice(it.path.length)};await tx('readwrite',s=>s.put(n))}}},
+async mv(it,to){if(NATIVE)await FMP.mv({from:it.path,to});else{const a=await all();for(const f of a)if(f.path==it.path||f.path.startsWith(it.path+'/')){await tx('readwrite',s=>s.delete(f.path));f.path=to+f.path.slice(it.path.length);await tx('readwrite',s=>s.put(f))}}},
+async cp(it,to){if(NATIVE)await FMP.cp({from:it.path,to});else{const a=await all();for(const f of a)if(f.path==it.path||f.path.startsWith(it.path+'/')){const n={...f,path:to+f.path.slice(it.path.length)};await tx('readwrite',s=>s.put(n))}}},
 url(it){if(NATIVE)return CAP.convertFileSrc('file://'+RT+it.path);return it.blob?URL.createObjectURL(it.blob):''}
 };
 async function scan(p,d,out,lim){if(d>3||out.length>lim)return;let l;try{l=await FSA.list(p)}catch(e){window._se=((e&&e.message)||e)+'';return}for(const f of l){if(f.name[0]=='.'||(d==0&&f.name=='Android'))continue;if(f.type=='dir')await scan(f.path,d+1,out,lim);else out.push(f)}}
@@ -189,12 +189,12 @@ function one(a,p){cl();const it=find(p);if(a=='ren')ask('الاسم الجديد
 function bulk(a){const its=[...selSet].map(find).filter(Boolean);if(a=='del')conf('حذف '+its.length+' عنصر؟',async()=>{for(const i of its)await FSA.del(i);clr();toast('تم الحذف');open_(path,catMode)});else{clip={m:a,items:its};clr();render();toast('انتقل للمجلد الهدف ثم ＋ ← لصق')}}
 function conf(t,f){sh(`<h4>${t}</h4><div class="row"><button class="c" onclick="cl()">إلغاء</button><button style="background:var(--bad)" id="ok">تأكيد</button></div>`);$('ok').onclick=()=>{cl();f()}}
 async function paste(){cl();for(const i of clip.items){const to=J(path,i.name);if(to==i.path||to.startsWith(i.path+'/'))continue;clip.m=='move'?await FSA.mv(i,to):await FSA.cp(i,to)}clip=null;toast('تم');open_(path)}
-$('imp').onchange=async e=>{for(const f of e.target.files){if(NATIVE){const d=await new Promise(r=>{const x=new FileReader;x.onload=()=>r(x.result.split(',')[1]);x.readAsDataURL(f)});await FM.write({path:J(path,f.name),data:d})}else await tx('readwrite',s=>s.put({path:J(path,f.name),type:'file',name:f.name,size:f.size,mtime:Date.now(),blob:f}))}toast('تم استيراد '+e.target.files.length+' ملف');e.target.value='';open_(path)};
-async function perm(){try{if(NATIVE){const r=await FM.check();if(r.granted)toast('الصلاحية ممنوحة ✔');else{toast('فعّل «الوصول إلى كل الملفات» ثم ارجع للتطبيق');await FM.ask()}}else toast('الصلاحيات تُطلب داخل تطبيق APK')}catch(e){toast('خطأ: '+(e.message||e))}}
+$('imp').onchange=async e=>{for(const f of e.target.files){if(NATIVE){const d=await new Promise(r=>{const x=new FileReader;x.onload=()=>r(x.result.split(',')[1]);x.readAsDataURL(f)});await FMP.write({path:J(path,f.name),data:d})}else await tx('readwrite',s=>s.put({path:J(path,f.name),type:'file',name:f.name,size:f.size,mtime:Date.now(),blob:f}))}toast('تم استيراد '+e.target.files.length+' ملف');e.target.value='';open_(path)};
+async function perm(){try{if(NATIVE){const r=await FMP.check();if(r.granted)toast('الصلاحية ممنوحة ✔');else{toast('فعّل «الوصول إلى كل الملفات» ثم ارجع للتطبيق');await FMP.ask()}}else toast('الصلاحيات تُطلب داخل تطبيق APK')}catch(e){toast('خطأ: '+(e.message||e))}}
 /* back button */
 if(NATIVE)CAP.registerPlugin('App').addListener('backButton',()=>{if($('sheet').classList.contains('on'))cl();else if(selSet.size)clr();else if($('v-files').classList.contains('on')&&(path||catMode))open_(path.split('/').slice(0,-1).join('/'));else if(!$('v-home').classList.contains('on'))goTab(0);else CAP.registerPlugin('App').exitApp()});
 if(localStorage.th=='l')document.documentElement.classList.add('l');
-$('fab').style.display='none';$('dg').textContent='native='+NATIVE+' cap='+!!CAP+' fm='+!!FM;
+$('fab').style.display='none';$('dg').textContent='native='+NATIVE+' cap='+!!CAP+' fm='+!!FMP;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&NATIVE){home();if($('v-files').classList.contains('on'))open_(path,catMode)}});
 (async()=>{if(NATIVE)await perm();home()})();
 </script>
